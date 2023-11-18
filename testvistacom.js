@@ -20,7 +20,7 @@ function getComInfo(stationNo, duz) {
           {
 
               "context": "OR CPRS GUI CHART",
-              "rpc": "ORWCOM ORDEROBJ",
+              "rpc": "ORWCOM GETOBJS",
               "jsonResult": false,
               "parameters" : []
 
