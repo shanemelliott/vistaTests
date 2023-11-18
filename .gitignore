@@ -14,7 +14,7 @@ db.json
 *.xlsx
 
 #config
-config.js
+config.*js
 db.js
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
