@@ -4,7 +4,7 @@ const fs = require('fs');
 var parse = require('csv-parse');
 const config = require('./config.dev');
 const cliProgress = require('cli-progress');
-const bar1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+const bar1 = new cliProgress.SingleBar({hideCursor: true}, cliProgress.Presets.shades_classic);
 
 const accountsFile = "accounts-tests.csv"
 
@@ -20,7 +20,7 @@ function getComInfo(stationNo, duz) {
           {
 
               "context": "OR CPRS GUI CHART",
-              "rpc": "ORWCOM GETOBJS", //"ORWCOM GETOBJS",
+              "rpc": "ORWCOM ORDEROBJ",
               "jsonResult": false,
               "parameters" : []
 
@@ -43,12 +43,11 @@ function getComInfo(stationNo, duz) {
           }
         })
         .catch((err) => {
-          console.error(err.response.data);
+          reject(err.response.data);
         });
       })
       .catch((err) => {
-        console.error(err);
-
+        reject(err.response.data);
       });
   })
 }
@@ -81,19 +80,23 @@ const doConfig = async () => {
     // console.log("Stations: ", stations);
     bar1.start(stations.length, 0);
     for (var i = 0; i < stations.length; i++) {
-      var comInfo = await getComInfo(stations[i].stationNo, stations[i].accountDuz)
-      console.log("comInfo: ", comInfo)
-      if (comInfo) {
-        addRes(comInfo)
-      } else {
-        console.log("No results")
+      try {
+        var comInfo = await getComInfo(stations[i].stationNo, stations[i].accountDuz);
+        console.log("comInfo: ", comInfo);
+        if (comInfo) {
+          addRes(comInfo);
+        } else {
+          console.log("No results");
+        }
+      } catch (err) {
+        console.error(err);
       }
       bar1.increment()
     }
   }
   catch (error) {
     console.error(error)
-    error_log(error)
+    // error_log(error)
   }
   const ws = fs.createWriteStream("results.csv");
   fastcsv
