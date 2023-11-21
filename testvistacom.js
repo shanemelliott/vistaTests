@@ -2,11 +2,11 @@ var axios = require('axios');
 const fastcsv = require('fast-csv');
 const fs = require('fs');
 var parse = require('csv-parse');
-const config = require('./config.dev');
+const config = require('./config');
 const cliProgress = require('cli-progress');
 const bar1 = new cliProgress.SingleBar({hideCursor: true}, cliProgress.Presets.shades_classic);
 
-const accountsFile = "accounts-tests.csv"
+const accountsFile = "accounts.csv"
 
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
 function getComInfo(stationNo, duz) {
@@ -18,16 +18,16 @@ function getComInfo(stationNo, duz) {
       }).then(function (data) {
         axios.post(config.vistaApi.url.replace('{stationNo}', stationNo).replace('{duz}', duz),
           {
-
-              "context": "OR CPRS GUI CHART",
-              "rpc": "ORWCOM GETOBJS",
-              "jsonResult": false,
-              "parameters" : []
+            
+            "context": "OR CPRS GUI CHART",
+            "rpc": "ORWCOM GETOBJS",
+            "jsonResult": false,
+            "parameters" : []
 
           }, { headers: { 'authorization': 'Bearer ' + data.data.data.token }, }
         ).then(function (data) {
           var jsonData = data.data;
-          console.log("Payload" + JSON.stringify(data.data.payload))
+          console.log("Payload: " + JSON.stringify(data.data.payload))
           var resp = jsonData.payload
           if (resp) {
             var respArr = resp.split(/\r?\n/);
@@ -39,8 +39,8 @@ function getComInfo(stationNo, duz) {
               dataArr.push(rec)
             })
             //console.log(dataArr)
-            resolve(dataArr)
           }
+          resolve(dataArr)
         })
         .catch((err) => {
           reject(err.response.data);
