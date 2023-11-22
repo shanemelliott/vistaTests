@@ -4,7 +4,9 @@ const fs = require('fs');
 var parse = require('csv-parse');
 const config = require('./config');
 const cliProgress = require('cli-progress');
-const bar1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+const bar1 = new cliProgress.SingleBar({hideCursor: true}, cliProgress.Presets.shades_classic);
+
+const accountsFile = "accounts.csv"
 
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
 function getComInfo(stationNo, duz) {
@@ -13,23 +15,19 @@ function getComInfo(stationNo, duz) {
     axios.post(config.vistaApi.tokenUrl,
       {
         "key": config.key,
-        "stationNo": stationNo,
-        "duz": duz
       }).then(function (data) {
-
-        axios.post(config.vistaApi.url,
+        axios.post(config.vistaApi.url.replace('{stationNo}', stationNo).replace('{duz}', duz),
           {
-
+            
             "context": "OR CPRS GUI CHART",
-            "rpc": "ORWCOM ORDEROBJ", //ORWCOM GETOBJS
-            "jsonResult": "false",
-            "parameters": ["4"]
+            "rpc": "ORWCOM GETOBJS",
+            "jsonResult": false,
+            "parameters" : []
 
-
-          }, { headers: { 'authorization': 'Bearer ' + data.data.payload.token }, }
+          }, { headers: { 'authorization': 'Bearer ' + data.data.data.token }, }
         ).then(function (data) {
-
           var jsonData = data.data;
+          console.log("Payload: " + JSON.stringify(data.data.payload))
           var resp = jsonData.payload
           if (resp) {
             var respArr = resp.split(/\r?\n/);
@@ -41,20 +39,22 @@ function getComInfo(stationNo, duz) {
               dataArr.push(rec)
             })
             //console.log(dataArr)
-            resolve(dataArr)
           }
+          resolve(dataArr)
         })
+        .catch((err) => {
+          reject(err.response.data);
+        });
       })
       .catch((err) => {
-        console.error(err);
-
+        reject(err.response.data);
       });
   })
 }
 function getStations() {
   return new Promise(function (resolve, reject) {
     var stations = []
-    fs.createReadStream("accounts.csv")
+    fs.createReadStream(accountsFile)
       .pipe(parse.parse({ delimiter: ',' }))
       .on('data', function (csvrow) {
         var row = {
@@ -77,25 +77,32 @@ const doConfig = async () => {
 
   try {
     var stations = await getStations()
+    // console.log("Stations: ", stations);
     bar1.start(stations.length, 0);
     for (var i = 0; i < stations.length; i++) {
-      var comInfo = await getComInfo(stations[i].stationNo, stations[i].accountDuz)
-
-      if (comInfo) {
-        addRes(comInfo)
-      } else {
+      try {
+        var comInfo = await getComInfo(stations[i].stationNo, stations[i].accountDuz);
+        console.log("comInfo: ", comInfo);
+        if (comInfo) {
+          addRes(comInfo);
+        } else {
+          console.log("No results");
+        }
+      } catch (err) {
+        console.error(err);
       }
       bar1.increment()
     }
   }
   catch (error) {
     console.error(error)
-    error_log(error)
+    // error_log(error)
   }
   const ws = fs.createWriteStream("results.csv");
   fastcsv
     .write(comRes, { headers: false })
     .pipe(ws);
+  bar1.stop();
 }
 doConfig()
 
